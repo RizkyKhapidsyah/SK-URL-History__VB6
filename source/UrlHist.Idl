@@ -1,0 +1,191 @@
+[
+	helpstring("Url History Interfaces v1.20 - Eduardo Morcillo"),
+	uuid(b443c9c0-16a6-11d3-8065-bd5573ef7a4d),
+	version(1.2)
+]
+library UrlHist {
+
+	importlib("stdole2.tlb");
+
+	interface IEnumSTATURL;
+	interface IUrlHistoryStg;
+
+	typedef enum STATURL_QUERYFLAGS {
+		[helpstring("Return cached items")]
+		STATURL_QUERYFLAG_ISCACHED = 0x00010000,
+		[helpstring("Don't return URL")]
+		STATURL_QUERYFLAG_NOURL    = 0x00020000,
+		[helpstring("Don't return URL title")]
+		STATURL_QUERYFLAG_NOTITLE  = 0x00040000
+	} STATURL_QUERYFLAGS;
+
+	typedef enum STATURLFLAGS {
+		[helpstring("The page is cached.")]
+		STATURLFLAG_ISCACHED	= 0x00000001
+	} STATURLFLAGS;
+
+	typedef struct STATURL {
+		[helpstring("Struct size")]
+		LONG cbSize;
+		[helpstring("URL")]
+		LONG pwcsUrl;
+		[helpstring("Page title")]
+		LONG pwcsTitle;
+		[helpstring("Last visited date (UTC)")]
+		FILETIME ftLastVisited;
+		[helpstring("Last updated date (UTC)")]
+		FILETIME ftLastUpdated;
+		[helpstring("Expiration date (UTC)")]
+		FILETIME ftExpires;
+		[helpstring("Flags")]
+		STATURLFLAGS dwFlags;
+	} STATURL;
+
+	[
+		object,
+		uuid(3C374A42-BAE4-11CF-BF7D-00AA006946EE),
+		pointer_default(unique),
+		helpstring("Enumerates the cached URLs")
+	]
+	interface IEnumSTATURL : IUnknown {
+
+		[helpstring("Returns the next \"celt\" URLS from the cache")]
+		HRESULT Next (
+			[in, optional, defaultvalue(1)] LONG celt,
+			[in, out] STATURL *rgelt,
+			[out, retval] LONG *pceltFetched);
+
+		[helpstring("Skips the next \"celt\" URLS from the cache")]
+		HRESULT Skip (
+			[in] LONG celt);
+
+		[helpstring("Resets the enumeration")]
+		HRESULT Reset (void) ;
+
+		[helpstring("Clones this object")]
+		HRESULT Clone(
+			[out, retval] IEnumSTATURL ** ppenum);
+
+		[helpstring("Sets the enumeration filter")]
+		HRESULT SetFilter (
+			[in] LPCOLESTR poszFilter,
+			[in] STATURL_QUERYFLAGS dwFlags);
+	}
+
+	[
+		object,
+		uuid(3C374A41-BAE4-11CF-BF7D-00AA006946EE),
+		pointer_default(unique)
+	]
+	interface IUrlHistoryStg : IUnknown {
+
+		[helpstring("Adds a new history entry")]
+		HRESULT AddUrl (
+			[in] LPOLESTR pocsUrl,
+			[in] LPOLESTR pocsTitle,
+			[in] STATURLFLAGS dwFlags);
+
+		[helpstring("Deletes an entry by its URL")]
+		HRESULT DeleteUrl(
+			[in] LPOLESTR pocsUrl,
+			[in] LONG dwFlags);
+
+		[helpstring("Returns a STATURL for a given URL")]
+		HRESULT QueryUrl (
+			[in] LPOLESTR pocsUrl,
+			[in] LONG dwFlags,
+			[in, out] STATURL *lpSTATURL);
+	
+		[helpstring("")]	
+		HRESULT BindToObject (
+			[in] LPOLESTR pocsUrl,
+			[in] IID *riid,
+			[out, retval] void **ppvOut);
+
+		[helpstring("Returns an enumerator for URLs")]
+		HRESULT EnumUrls (
+			[out, retval] IEnumSTATURL **ppEnum);
+	
+	}
+
+	[
+		object,
+		uuid(AFA0DC11-C313-11d0-831A-00C04FD5AE38),
+		pointer_default(unique)
+	]
+	interface IUrlHistoryStg2 : IUrlHistoryStg {
+	
+		[helpstring("Adds an URLS\n IOleCommandTarget *poctNotify\nIShellFolder *punkISFolder")]
+		HRESULT AddUrlAndNotify (
+			[in] LPOLESTR pocsUrl,
+			[in] LPOLESTR pocsTitle,
+			[in] LONG dwFlags,
+			[in] BOOL fWriteHistory,
+			[in] IUnknown *poctNotify,
+			[in, unique] IUnknown *punkISFolder );
+
+		[helpstring("Removes all history items")]
+		HRESULT ClearHistory();
+
+	}
+
+	[
+		uuid(3C374A40-BAE4-11CF-BF7D-00AA006946EE),
+		helpstring("UrlHistory class")
+	]
+	coclass UrlHistory {
+		[default] interface IUrlHistoryStg2;
+	}
+
+	[
+		dllname("oleaut32.dll")
+	]
+	module oleaut32 {
+
+		[entry("SystemTimeToVariantTime")]
+		LONG SystemTimeToVariantTime(
+			[in] SYSTEMTIME *lpSystemTime, 
+			[out] DOUBLE *pvtime);
+	}
+
+
+	[
+		dllname("kernel32.dll")
+	]
+	module krnl {
+
+		[entry("FileTimeToLocalFileTime")]
+		BOOL FileTimeToLocalFileTime(
+			[in] FILETIME *lpFileTime,
+			[in, out] FILETIME *lpLocalFileTime);
+
+		[entry("FileTimeToSystemTime")]
+		BOOL FileTimeToSystemTime(
+			[in] FILETIME *lpFileTime,
+			[in, out] SYSTEMTIME *lpSystemTime);
+
+		[entry("lstrlenW")]
+		LONG lstrlenW(
+			[in] void *lpString);
+
+		[entry("RtlMoveMemory")]
+		void MoveMemory(
+			[in] void *pDest,
+			[in] void *pSource,
+			[in] LONG ByteLen);
+
+	}
+
+	[
+		dllname("ole32.dll"),
+		helpstring("Storage functions")
+	]
+	module ole32 {
+
+		[entry("CoTaskMemFree")]
+		HRESULT CoTaskMemFree([in] LONG Ptr);
+ 
+	}
+
+
+}
